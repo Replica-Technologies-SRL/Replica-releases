@@ -1,0 +1,29 @@
+# One-off clean-up requested by the owner on 2026-10-08: remove every release and tag up to
+# and including v0.1.42. v0.1.43 and newer are never touched. Delete this file afterwards.
+name: Remove old releases (<= v0.1.42)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Delete releases and tags v0.1.0 .. v0.1.42
+        run: |
+          set -euo pipefail
+          for n in $(seq 0 42); do
+            tag="v0.1.$n"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release delete "$tag" --yes --cleanup-tag
+              echo "deleted release + tag $tag"
+            elif gh api "repos/$GH_REPO/git/refs/tags/$tag" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$tag"
+              echo "deleted tag $tag (no release)"
+            fi
+          done
+          echo "Remaining releases:"
+          gh release list --limit 100
